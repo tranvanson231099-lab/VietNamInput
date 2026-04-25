@@ -164,8 +164,14 @@ function onCursorUpdate(properties) {
  * Đăng ký tất cả các hàm lắng nghe sự kiện của IME.
  */
 export function registerImeListeners() {
-    chrome.input.ime.onFocus.addListener(onFocus);
-    chrome.input.ime.onBlur.addListener(onBlur);
-    chrome.input.ime.onKeyEvent.addListener(onKeyEvent);
-    chrome.input.ime.onCursorUpdate.addListener(onCursorUpdate);
+    // Defensive check to ensure the IME API is available
+    if (chrome.input && chrome.input.ime) {
+        chrome.input.ime.onFocus.addListener(onFocus);
+        chrome.input.ime.onBlur.addListener(onBlur);
+        chrome.input.ime.onKeyEvent.addListener(onKeyEvent);
+        chrome.input.ime.onCursorUpdate.addListener(onCursorUpdate);
+        console.log("IME listeners registered successfully.");
+    } else {
+        console.error("`chrome.input.ime` API is not available. This is unexpected. Check the extension's permissions and context.");
+    }
 }
