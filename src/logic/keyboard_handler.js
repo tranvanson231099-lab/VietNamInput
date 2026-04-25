@@ -1,11 +1,14 @@
 
 import { findWordAtCursor } from './word_selector.js';
+import { CompositionBuffer } from '../input_engine/composition_buffer.js';
 
 // --- Trạng thái của Module ---
 
 let contextID = 0; // ID của ô nhập liệu đang được focus
 let compositionText = ""; // Chuỗi văn bản đang được gõ
 let cursorPosition = 0; // Vị trí của con trỏ trong chuỗi compositionText
+
+const compositionBuffer = new CompositionBuffer(); // Bộ đệm cho từ đang được xử lý
 
 // --- Các Hàm Xử Lý Logic ---
 
@@ -17,17 +20,21 @@ function updateComposition() {
 
     if (compositionText === "") {
          chrome.input.ime.clearComposition({ contextID: contextID });
+         compositionBuffer.clear(); // Xóa cả bộ đệm
          return;
     }
 
     const wordInfo = findWordAtCursor(compositionText, cursorPosition);
 
-    // DEBUG: In ra kết quả của selector để gỡ lỗi
-    console.log("Selector [DEBUG]:", { 
-        text: compositionText, 
-        cursor: cursorPosition, 
-        result: wordInfo 
-    });
+    // Cập nhật bộ đệm với từ tìm thấy (hoặc xóa nếu không tìm thấy)
+    if (wordInfo) {
+        compositionBuffer.setText(wordInfo.word);
+    } else {
+        compositionBuffer.clear();
+    }
+
+    // DEBUG: In ra nội dung của bộ đệm để gỡ lỗi
+    console.log("Buffer [DEBUG]:", compositionBuffer.getContent());
 
     if (wordInfo) {
         chrome.input.ime.setComposition({
@@ -67,6 +74,7 @@ function resetComposition() {
          chrome.input.ime.clearComposition({ contextID: contextID });
          compositionText = "";
          cursorPosition = 0;
+         compositionBuffer.clear(); // Đảm bảo bộ đệm cũng được xóa
     }
 }
 
