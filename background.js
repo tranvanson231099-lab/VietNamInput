@@ -4,14 +4,12 @@ let composingText = "";
 // ===== FOCUS =====
 chrome.input.ime.onFocus.addListener((context) => {
   contextID = context.contextID;
-  console.log("Focus:", contextID);
 });
 
 // ===== BLUR =====
 chrome.input.ime.onBlur.addListener(() => {
   contextID = -1;
   composingText = "";
-  console.log("Blur");
 });
 
 // ===== UPDATE COMPOSITION =====
@@ -23,11 +21,11 @@ function updateComposition(text) {
   chrome.input.ime.setComposition({
     contextID,
     text: safeText,
-    cursor: safeText.length // 🔥 luôn đúng, không crash
+    cursor: safeText.length
   });
 }
 
-// ===== COMMIT =====
+// ===== COMMIT TEXT =====
 function commitText(text) {
   if (contextID === -1) return;
 
@@ -47,12 +45,13 @@ function commitText(text) {
 chrome.input.ime.onKeyEvent.addListener((engineID, keyData) => {
   if (keyData.type !== "keydown") return false;
 
-  // 🔥 CHO PHÉP PHÍM CHỨC NĂNG
+  // 🔥 FIX: cho phép Ctrl / Alt / Meta + commit trước
   if (keyData.ctrlKey || keyData.altKey || keyData.metaKey) {
-    return false;
+    if (composingText.length > 0) {
+      commitText(composingText);
+    }
+    return false; // cho hệ thống xử lý
   }
-
-  console.log("Key:", keyData.key, "Code:", keyData.code);
 
   // ===== BACKSPACE =====
   if (keyData.code === "Backspace") {
