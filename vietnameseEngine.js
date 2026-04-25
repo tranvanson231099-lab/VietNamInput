@@ -1,14 +1,34 @@
 // ===== BUFFER =====
 let buffer = "";
 
-// ===== BẢNG DẤU =====
+// ===== NGUYÊN ÂM =====
+const vowels = "aeiouy";
+
+// ===== BIẾN ĐỔI TELEX =====
+const transformMap = {
+  dd: "đ",
+  aa: "â",
+  aw: "ă",
+  ee: "ê",
+  oo: "ô",
+  ow: "ơ",
+  uw: "ư"
+};
+
+// ===== DẤU =====
 const toneMap = {
   a: ["á", "à", "ả", "ã", "ạ"],
   e: ["é", "è", "ẻ", "ẽ", "ẹ"],
   i: ["í", "ì", "ỉ", "ĩ", "ị"],
   o: ["ó", "ò", "ỏ", "õ", "ọ"],
   u: ["ú", "ù", "ủ", "ũ", "ụ"],
-  y: ["ý", "ỳ", "ỷ", "ỹ", "ỵ"]
+  y: ["ý", "ỳ", "ỷ", "ỹ", "ỵ"],
+  â: ["ấ", "ầ", "ẩ", "ẫ", "ậ"],
+  ă: ["ắ", "ằ", "ẳ", "ẵ", "ặ"],
+  ê: ["ế", "ề", "ể", "ễ", "ệ"],
+  ô: ["ố", "ồ", "ổ", "ỗ", "ộ"],
+  ơ: ["ớ", "ờ", "ở", "ỡ", "ợ"],
+  ư: ["ứ", "ừ", "ử", "ữ", "ự"]
 };
 
 const toneKeys = {
@@ -37,7 +57,7 @@ function applyTone(char, toneIndex) {
 // ===== PROCESS KEY =====
 export function processKey(key, code) {
 
-  // xử lý dấu
+  // ===== DẤU =====
   if (toneKeys[key] !== undefined) {
     if (buffer.length === 0) return { action: "none" };
 
@@ -48,13 +68,40 @@ export function processKey(key, code) {
 
     return {
       action: "replace",
-      text: newChar
+      text: newChar,
+      replaceLength: 1
     };
   }
 
-  // xử lý chữ
+  // ===== CHỮ =====
   if (key && key.length === 1 && /^[a-zA-Z]$/.test(key)) {
     buffer += key;
+
+    // ===== XỬ LÝ PHỤ ÂM ĐÚNG =====
+    if (buffer.length >= 2) {
+      let last2 = buffer.slice(-2);
+      let last2Lower = last2.toLowerCase();
+
+      // 🔥 chỉ transform nếu bắt đầu bằng nguyên âm
+      if (
+        vowels.includes(last2Lower[0]) &&
+        transformMap[last2Lower]
+      ) {
+        let newChar = transformMap[last2Lower];
+
+        if (last2 === last2.toUpperCase()) {
+          newChar = newChar.toUpperCase();
+        }
+
+        buffer = buffer.slice(0, -2) + newChar;
+
+        return {
+          action: "replace",
+          text: newChar,
+          replaceLength: 2
+        };
+      }
+    }
 
     return {
       action: "add",
@@ -62,14 +109,14 @@ export function processKey(key, code) {
     };
   }
 
-  // backspace
+  // ===== BACKSPACE =====
   if (code === "Backspace") {
     buffer = buffer.slice(0, -1);
     return { action: "none" };
   }
 
-  // space → reset buffer
-  if (code === "Space") {
+  // ===== SPACE / ENTER =====
+  if (code === "Space" || code === "Enter") {
     buffer = "";
     return { action: "none" };
   }

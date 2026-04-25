@@ -2,21 +2,21 @@ import { processKey } from "./vietnameseEngine.js";
 
 let contextID = -1;
 
-// focus
+// ===== FOCUS =====
 chrome.input.ime.onFocus.addListener((context) => {
   contextID = context.contextID;
 });
 
-// blur
+// ===== BLUR =====
 chrome.input.ime.onBlur.addListener(() => {
   contextID = -1;
 });
 
-// key event
+// ===== KEY EVENT =====
 chrome.input.ime.onKeyEvent.addListener((engineID, keyData) => {
   if (keyData.type !== "keydown") return false;
 
-  // cho phép Ctrl
+  // cho phép Ctrl / Alt
   if (keyData.ctrlKey || keyData.altKey || keyData.metaKey) {
     return false;
   }
@@ -34,10 +34,18 @@ chrome.input.ime.onKeyEvent.addListener((engineID, keyData) => {
 
   // ===== REPLACE =====
   if (result.action === "replace") {
+
+    chrome.input.ime.deleteSurroundingText({
+      contextID,
+      offset: -result.replaceLength,
+      length: result.replaceLength
+    });
+
     chrome.input.ime.commitText({
       contextID,
-      text: "\b" + result.text
+      text: result.text
     });
+
     return true;
   }
 
