@@ -12,6 +12,12 @@ export function findWordAtCursor(text, cursor) {
     return null;
   }
 
+  // FIX: Nếu ký tự ngay trước con trỏ là dấu cách, ta không coi là đang ở trên một từ.
+  // Điều này xử lý trường hợp "son |tran" => không bôi đen gì.
+  if (cursor > 0 && text.charAt(cursor - 1) === ' ') {
+      return null;
+  }
+
   // Tìm vị trí bắt đầu của từ (vị trí của dấu cách liền trước con trỏ, hoặc đầu chuỗi)
   const start = text.lastIndexOf(' ', cursor - 1) + 1;
 
