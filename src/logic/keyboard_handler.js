@@ -13,24 +13,29 @@ const compositionBuffer = new CompositionBuffer(); // Bộ đệm cho từ đang
 // --- Các Hàm Xử Lý Logic ---
 
 /**
+ * Đặt lại trạng thái nội bộ của bộ gõ (văn bản, con trỏ, bộ đệm).
+ * Hàm này không thực hiện bất kỳ lệnh gọi API nào và an toàn để gọi từ bất kỳ đâu.
+ */
+function resetInternalState() {
+    compositionText = "";
+    cursorPosition = 0;
+    compositionBuffer.clear();
+}
+
+/**
  * Cập nhật vùng được bôi đen (composition) trong ô nhập liệu.
  */
 function updateComposition() {
     if (contextID === 0) return;
 
-    // FIX: Xóa khối điều kiện `if (compositionText === "")` để tránh race condition.
-    // Logic bên dưới giờ đây sẽ xử lý cả trường hợp chuỗi rỗng một cách an toàn.
-
     const wordInfo = findWordAtCursor(compositionText, cursorPosition);
 
-    // Cập nhật bộ đệm với từ tìm thấy (hoặc xóa nếu không tìm thấy)
     if (wordInfo) {
         compositionBuffer.setText(wordInfo.word);
     } else {
         compositionBuffer.clear();
     }
 
-    // DEBUG: In ra nội dung của bộ đệm để gỡ lỗi
     console.log("Buffer [DEBUG]:", compositionBuffer.getContent());
 
     if (wordInfo) {
@@ -42,8 +47,6 @@ function updateComposition() {
             selectionEnd: wordInfo.end
         });
     } else {
-        // Nếu không có từ nào được tìm thấy (bao gồm cả khi compositionText rỗng),
-        // hãy gọi setComposition với chuỗi rỗng để xóa vùng bôi đen một cách an toàn.
          chrome.input.ime.setComposition({
             contextID: contextID,
             text: compositionText,
@@ -61,19 +64,8 @@ function commitText(text) {
             contextID: contextID,
             text: text
         });
-        resetComposition();
-    }
-}
-
-/**
- * Xóa sạch trạng thái của composition.
- */
-function resetComposition() {
-    if (compositionText) {
-         chrome.input.ime.clearComposition({ contextID: contextID });
-         compositionText = "";
-         cursorPosition = 0;
-         compositionBuffer.clear(); // Đảm bảo bộ đệm cũng được xóa
+        // Sau khi commit, API đã tự xóa vùng composition. Chúng ta chỉ cần reset trạng thái nội bộ.
+        resetInternalState();
     }
 }
 
@@ -81,12 +73,19 @@ function resetComposition() {
 
 function onFocus(context) {
     contextID = context.contextID;
-    resetComposition();
+    // Khi focus vào một ô mới, hãy chủ động xóa mọi composition còn sót lại trên UI.
+    chrome.input.ime.clearComposition({ contextID: contextID });
+    // Sau đó reset trạng thái nội bộ để chuẩn bị cho lần gõ mới.
+    resetInternalState();
 }
 
 function onBlur(blurredContextID) {
-    resetComposition();
-    contextID = 0;
+    // Khi một ô bị mất focus, context đó không còn hoạt động. ĐỪNG gọi API trên nó.
+    // Chỉ cần reset trạng thái nội bộ nếu context bị blur là context chúng ta đang theo dõi.
+    if (contextID === blurredContextID) {
+        resetInternalState();
+        contextID = 0;
+    }
 }
 
 function onKeyEvent(engineID, keyData) {
