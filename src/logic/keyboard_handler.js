@@ -15,30 +15,33 @@ let cursorPosition = 0; // Vị trí của con trỏ trong chuỗi compositionTe
 function updateComposition() {
     if (contextID === 0) return;
 
-    // Nếu không có văn bản, xóa vùng bôi đen
     if (compositionText === "") {
          chrome.input.ime.clearComposition({ contextID: contextID });
          return;
     }
 
-    // Tìm từ tại vị trí con trỏ hiện tại
     const wordInfo = findWordAtCursor(compositionText, cursorPosition);
 
+    // DEBUG: In ra kết quả của selector để gỡ lỗi
+    console.log("Selector [DEBUG]:", { 
+        text: compositionText, 
+        cursor: cursorPosition, 
+        result: wordInfo 
+    });
+
     if (wordInfo) {
-        // Nếu tìm thấy, bôi đen từ đó
         chrome.input.ime.setComposition({
             contextID: contextID,
             text: compositionText,
-            cursor: cursorPosition, // Cập nhật vị trí con trỏ thật
+            cursor: cursorPosition,
             selectionStart: wordInfo.start,
             selectionEnd: wordInfo.end
         });
     } else {
-        // Nếu không, chỉ hiển thị văn bản mà không bôi đen gì
          chrome.input.ime.setComposition({
             contextID: contextID,
             text: compositionText,
-            cursor: cursorPosition, // Cập nhật vị trí con trỏ thật
+            cursor: cursorPosition,
         });
     }
 }
@@ -84,7 +87,6 @@ function onKeyEvent(engineID, keyData) {
         return false;
     }
 
-    // Xử lý các phím di chuyển con trỏ
     if (keyData.key === 'ArrowLeft') {
         cursorPosition = Math.max(0, cursorPosition - 1);
         updateComposition();
@@ -96,23 +98,18 @@ function onKeyEvent(engineID, keyData) {
         return true;
     }
 
-    // Khi nhấn phím Space, "commit" văn bản và thêm dấu cách
     if (keyData.key === ' ') {
         commitText(compositionText + ' ');
         return true;
     }
 
-    // Khi nhấn phím Enter
     if (keyData.key === 'Enter') {
-        // Commit phần text đang soạn thảo nếu có
         if (compositionText.length > 0) {
             commitText(compositionText);
         }
-        // Luôn để hệ thống xử lý phím Enter (để xuống dòng)
         return false;
     }
 
-    // Khi nhấn phím Backspace
     if (keyData.key === 'Backspace') {
         if (cursorPosition > 0) {
             const beforeCursor = compositionText.substring(0, cursorPosition - 1);
@@ -125,7 +122,6 @@ function onKeyEvent(engineID, keyData) {
         return false;
     }
 
-    // Xử lý các ký tự thông thường
     if (keyData.key.length === 1 && !keyData.ctrlKey && !keyData.altKey) {
         const beforeCursor = compositionText.substring(0, cursorPosition);
         const afterCursor = compositionText.substring(cursorPosition);
