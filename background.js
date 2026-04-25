@@ -1,34 +1,33 @@
 let contextID = -1;
 let composingText = "";
 
-// focus vào input
+// ===== FOCUS =====
 chrome.input.ime.onFocus.addListener((context) => {
   contextID = context.contextID;
   console.log("Focus:", contextID);
 });
 
-// blur (rời input)
+// ===== BLUR =====
 chrome.input.ime.onBlur.addListener(() => {
   contextID = -1;
   composingText = "";
   console.log("Blur");
 });
 
-// hàm update composition (🔥 fix lỗi cursor)
+// ===== UPDATE COMPOSITION =====
 function updateComposition(text) {
   if (contextID === -1) return;
 
   const safeText = text || "";
-  const cursor = Math.min(safeText.length, safeText.length); // luôn hợp lệ
 
   chrome.input.ime.setComposition({
     contextID,
     text: safeText,
-    cursor: cursor
+    cursor: safeText.length // 🔥 luôn đúng, không crash
   });
 }
 
-// commit text
+// ===== COMMIT =====
 function commitText(text) {
   if (contextID === -1) return;
 
@@ -44,13 +43,18 @@ function commitText(text) {
   });
 }
 
-// bắt phím
+// ===== KEY EVENT =====
 chrome.input.ime.onKeyEvent.addListener((engineID, keyData) => {
   if (keyData.type !== "keydown") return false;
 
+  // 🔥 CHO PHÉP PHÍM CHỨC NĂNG
+  if (keyData.ctrlKey || keyData.altKey || keyData.metaKey) {
+    return false;
+  }
+
   console.log("Key:", keyData.key, "Code:", keyData.code);
 
-  // 🔥 BACKSPACE (fix lỗi "?")
+  // ===== BACKSPACE =====
   if (keyData.code === "Backspace") {
     if (composingText.length > 0) {
       composingText = composingText.slice(0, -1);
@@ -60,7 +64,7 @@ chrome.input.ime.onKeyEvent.addListener((engineID, keyData) => {
     return false;
   }
 
-  // 🔥 ENTER
+  // ===== ENTER =====
   if (keyData.code === "Enter") {
     if (composingText.length > 0) {
       commitText(composingText);
@@ -69,13 +73,13 @@ chrome.input.ime.onKeyEvent.addListener((engineID, keyData) => {
     return false;
   }
 
-  // 🔥 SPACE
+  // ===== SPACE =====
   if (keyData.code === "Space") {
     commitText(composingText + " ");
     return true;
   }
 
-  // 🔥 chỉ nhận chữ cái (tránh "?")
+  // ===== CHỈ NHẬN CHỮ =====
   if (
     keyData.key &&
     keyData.key.length === 1 &&
@@ -86,5 +90,6 @@ chrome.input.ime.onKeyEvent.addListener((engineID, keyData) => {
     return true;
   }
 
+  // ===== PHÍM KHÁC =====
   return false;
 });
