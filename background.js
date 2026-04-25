@@ -1,94 +1,49 @@
 let contextID = -1;
-let composingText = "";
 
-// ===== FOCUS =====
 chrome.input.ime.onFocus.addListener((context) => {
   contextID = context.contextID;
 });
 
-// ===== BLUR =====
 chrome.input.ime.onBlur.addListener(() => {
   contextID = -1;
-  composingText = "";
 });
 
-// ===== UPDATE COMPOSITION =====
-function updateComposition(text) {
-  if (contextID === -1) return;
-
-  const safeText = text || "";
-
-  chrome.input.ime.setComposition({
-    contextID,
-    text: safeText,
-    cursor: safeText.length
-  });
-}
-
-// ===== COMMIT TEXT =====
-function commitText(text) {
-  if (contextID === -1) return;
-
-  chrome.input.ime.commitText({
-    contextID,
-    text: text
-  });
-
-  composingText = "";
-
-  chrome.input.ime.clearComposition({
-    contextID
-  });
-}
-
-// ===== KEY EVENT =====
 chrome.input.ime.onKeyEvent.addListener((engineID, keyData) => {
   if (keyData.type !== "keydown") return false;
 
-  // 🔥 FIX: cho phép Ctrl / Alt / Meta + commit trước
+  // cho phép Ctrl / Alt
   if (keyData.ctrlKey || keyData.altKey || keyData.metaKey) {
-    if (composingText.length > 0) {
-      commitText(composingText);
-    }
-    return false; // cho hệ thống xử lý
+    return false;
   }
 
-  // ===== BACKSPACE =====
+  // Backspace → hệ thống xử lý
   if (keyData.code === "Backspace") {
-    if (composingText.length > 0) {
-      composingText = composingText.slice(0, -1);
-      updateComposition(composingText);
-      return true;
-    }
     return false;
   }
 
-  // ===== ENTER =====
+  // Enter → hệ thống xử lý
   if (keyData.code === "Enter") {
-    if (composingText.length > 0) {
-      commitText(composingText);
-      return true;
-    }
     return false;
   }
 
-  // ===== SPACE =====
+  // Space → hệ thống xử lý
   if (keyData.code === "Space") {
-    commitText(composingText + " ");
-    return true;
+    return false;
   }
 
-  // ===== CHỈ NHẬN CHỮ =====
+  // chỉ xử lý chữ
   if (
     keyData.key &&
     keyData.key.length === 1 &&
     /[a-zA-Z]/.test(keyData.key)
   ) {
-    composingText += keyData.key;
-    updateComposition(composingText);
+    chrome.input.ime.commitText({
+      contextID,
+      text: keyData.key
+    });
+
     return true;
   }
 
-  // ===== PHÍM KHÁC =====
   return false;
 });
