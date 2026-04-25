@@ -1,0 +1,7 @@
+"input_components": [
+  {
+    "type": "ime",
+    "id": "vietnam_input",
+    "language": "vi"
+  }
+]
