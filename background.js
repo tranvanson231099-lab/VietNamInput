@@ -1,78 +1,45 @@
-// ===== BUFFER =====
-let buffer = "";
+import { processKey } from "./vietnameseEngine.js";
 
-// ===== BẢNG DẤU =====
-const toneMap = {
-  a: ["á", "à", "ả", "ã", "ạ"],
-  e: ["é", "è", "ẻ", "ẽ", "ẹ"],
-  i: ["í", "ì", "ỉ", "ĩ", "ị"],
-  o: ["ó", "ò", "ỏ", "õ", "ọ"],
-  u: ["ú", "ù", "ủ", "ũ", "ụ"],
-  y: ["ý", "ỳ", "ỷ", "ỹ", "ỵ"]
-};
+let contextID = -1;
 
-const toneKeys = {
-  s: 0,
-  f: 1,
-  r: 2,
-  x: 3,
-  j: 4
-};
+// focus
+chrome.input.ime.onFocus.addListener((context) => {
+  contextID = context.contextID;
+});
 
-// ===== APPLY TONE =====
-function applyTone(char, toneIndex) {
-  const lower = char.toLowerCase();
+// blur
+chrome.input.ime.onBlur.addListener(() => {
+  contextID = -1;
+});
 
-  if (!toneMap[lower]) return char;
+// key event
+chrome.input.ime.onKeyEvent.addListener((engineID, keyData) => {
+  if (keyData.type !== "keydown") return false;
 
-  let newChar = toneMap[lower][toneIndex];
-
-  if (char === char.toUpperCase()) {
-    newChar = newChar.toUpperCase();
+  // cho phép Ctrl
+  if (keyData.ctrlKey || keyData.altKey || keyData.metaKey) {
+    return false;
   }
 
-  return newChar;
-}
+  const result = processKey(keyData.key, keyData.code);
 
-// ===== PROCESS KEY =====
-export function processKey(key, code) {
-
-  // xử lý dấu
-  if (toneKeys[key] !== undefined) {
-    if (buffer.length === 0) return { action: "none" };
-
-    let lastChar = buffer[buffer.length - 1];
-    let newChar = applyTone(lastChar, toneKeys[key]);
-
-    buffer = buffer.slice(0, -1) + newChar;
-
-    return {
-      action: "replace",
-      text: newChar
-    };
+  // ===== ADD =====
+  if (result.action === "add") {
+    chrome.input.ime.commitText({
+      contextID,
+      text: result.text
+    });
+    return true;
   }
 
-  // xử lý chữ
-  if (key && key.length === 1 && /^[a-zA-Z]$/.test(key)) {
-    buffer += key;
-
-    return {
-      action: "add",
-      text: key
-    };
+  // ===== REPLACE =====
+  if (result.action === "replace") {
+    chrome.input.ime.commitText({
+      contextID,
+      text: "\b" + result.text
+    });
+    return true;
   }
 
-  // backspace
-  if (code === "Backspace") {
-    buffer = buffer.slice(0, -1);
-    return { action: "none" };
-  }
-
-  // space → reset buffer
-  if (code === "Space") {
-    buffer = "";
-    return { action: "none" };
-  }
-
-  return { action: "none" };
-}
+  return false;
+});
