@@ -71,11 +71,20 @@ function commitText(text) {
 
 // --- Các Hàm Lắng Nghe Sự Kiện IME ---
 
-function onFocus(context) {
+async function onFocus(context) {
     contextID = context.contextID;
-    // Khi focus vào một ô mới, hãy chủ động xóa mọi composition còn sót lại trên UI.
-    chrome.input.ime.clearComposition({ contextID: contextID });
-    // Sau đó reset trạng thái nội bộ để chuẩn bị cho lần gõ mới.
+
+    // FIX: Bọc lệnh gọi API không ổn định trong try-catch để ngăn chặn crash.
+    // Lỗi "Context is not active" có thể xảy ra trong các trường hợp race condition
+    // khi người dùng chuyển focus quá nhanh.
+    try {
+        // Cố gắng xóa mọi composition còn sót lại trên UI một cách chủ động.
+        await chrome.input.ime.clearComposition({ contextID: context.contextID });
+    } catch (e) {
+        console.warn(`Could not clear composition on context ${context.contextID}. This is usually safe to ignore.`, e);
+    }
+
+    // Luôn reset trạng thái nội bộ để chuẩn bị cho lần gõ mới.
     resetInternalState();
 }
 
