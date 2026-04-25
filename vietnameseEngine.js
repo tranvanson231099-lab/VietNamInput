@@ -77,15 +77,15 @@ export function processKey(key, code) {
   if (key && key.length === 1 && /^[a-zA-Z]$/.test(key)) {
     buffer += key;
 
-    // ===== XỬ LÝ PHỤ ÂM ĐÚNG =====
+    // ===== XỬ LÝ BIẾN ĐỔI TELEX =====
     if (buffer.length >= 2) {
       let last2 = buffer.slice(-2);
       let last2Lower = last2.toLowerCase();
 
-      // 🔥 chỉ transform nếu bắt đầu bằng nguyên âm
+      // Combine vowel and 'dd' transformations
       if (
-        vowels.includes(last2Lower[0]) &&
-        transformMap[last2Lower]
+        (transformMap[last2Lower] && vowels.includes(last2Lower[0])) ||
+        last2Lower === 'dd'
       ) {
         let newChar = transformMap[last2Lower];
 
