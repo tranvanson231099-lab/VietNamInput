@@ -1,49 +1,39 @@
 let contextID = -1;
 
+// ===== FOCUS =====
 chrome.input.ime.onFocus.addListener((context) => {
   contextID = context.contextID;
 });
 
+// ===== BLUR =====
 chrome.input.ime.onBlur.addListener(() => {
   contextID = -1;
 });
 
+// ===== KEY EVENT =====
 chrome.input.ime.onKeyEvent.addListener((engineID, keyData) => {
   if (keyData.type !== "keydown") return false;
 
-  // cho phép Ctrl / Alt
+  // cho phép Ctrl / Alt / Meta
   if (keyData.ctrlKey || keyData.altKey || keyData.metaKey) {
     return false;
   }
 
-  // Backspace → hệ thống xử lý
-  if (keyData.code === "Backspace") {
-    return false;
-  }
-
-  // Enter → hệ thống xử lý
-  if (keyData.code === "Enter") {
-    return false;
-  }
-
-  // Space → hệ thống xử lý
-  if (keyData.code === "Space") {
-    return false;
-  }
-
-  // chỉ xử lý chữ
-  if (
+  // 🔥 CHỈ xử lý chữ a-z
+  const isLetter =
     keyData.key &&
     keyData.key.length === 1 &&
-    /[a-zA-Z]/.test(keyData.key)
-  ) {
+    /^[a-zA-Z]$/.test(keyData.key);
+
+  if (isLetter) {
     chrome.input.ime.commitText({
       contextID,
       text: keyData.key
     });
 
-    return true;
+    return true; // chặn Chrome gõ lại
   }
 
+  // 🔥 tất cả phím khác → hệ thống xử lý
   return false;
 });
