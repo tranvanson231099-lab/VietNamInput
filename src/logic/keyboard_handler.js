@@ -38,20 +38,23 @@ function updateComposition() {
 
     console.log("Buffer [DEBUG]:", compositionBuffer.getContent());
 
-    if (wordInfo) {
-        chrome.input.ime.setComposition({
-            contextID: contextID,
-            text: compositionText,
-            cursor: cursorPosition,
-            selectionStart: wordInfo.start,
-            selectionEnd: wordInfo.end
-        });
-    } else {
-         chrome.input.ime.setComposition({
-            contextID: contextID,
-            text: compositionText,
-            cursor: cursorPosition,
-        });
+    // Check if chrome.input.ime and its methods are available before using them
+    if (chrome.input && chrome.input.ime) {
+        if (wordInfo) {
+            chrome.input.ime.setComposition({
+                contextID: contextID,
+                text: compositionText,
+                cursor: cursorPosition,
+                selectionStart: wordInfo.start,
+                selectionEnd: wordInfo.end
+            });
+        } else {
+             chrome.input.ime.setComposition({
+                contextID: contextID,
+                text: compositionText,
+                cursor: cursorPosition,
+            });
+        }
     }
 }
 
@@ -59,7 +62,7 @@ function updateComposition() {
  * "Commit" (chấp nhận) văn bản và xóa vùng bôi đen.
  */
 function commitText(text) {
-    if (contextID !== 0) {
+    if (contextID !== 0 && chrome.input && chrome.input.ime) {
         chrome.input.ime.commitText({
             contextID: contextID,
             text: text
@@ -74,23 +77,18 @@ function commitText(text) {
 async function onFocus(context) {
     contextID = context.contextID;
 
-    // FIX: Bọc lệnh gọi API không ổn định trong try-catch để ngăn chặn crash.
-    // Lỗi "Context is not active" có thể xảy ra trong các trường hợp race condition
-    // khi người dùng chuyển focus quá nhanh.
     try {
-        // Cố gắng xóa mọi composition còn sót lại trên UI một cách chủ động.
-        await chrome.input.ime.clearComposition({ contextID: context.contextID });
+        if (chrome.input && chrome.input.ime) {
+            await chrome.input.ime.clearComposition({ contextID: context.contextID });
+        }
     } catch (e) {
         console.warn(`Could not clear composition on context ${context.contextID}. This is usually safe to ignore.`, e);
     }
 
-    // Luôn reset trạng thái nội bộ để chuẩn bị cho lần gõ mới.
     resetInternalState();
 }
 
 function onBlur(blurredContextID) {
-    // Khi một ô bị mất focus, context đó không còn hoạt động. ĐỪNG gọi API trên nó.
-    // Chỉ cần reset trạng thái nội bộ nếu context bị blur là context chúng ta đang theo dõi.
     if (contextID === blurredContextID) {
         resetInternalState();
         contextID = 0;
@@ -150,8 +148,6 @@ function onKeyEvent(engineID, keyData) {
 }
 
 function onCursorUpdate(properties) {
-    // Khi người dùng nhấp chuột hoặc di chuyển con trỏ trong vùng soạn thảo,
-    // cập nhật lại vị trí con trỏ và tính toán lại vùng bôi đen.
     if (contextID !== 0 && properties.visible) {
         cursorPosition = properties.cursor;
         updateComposition();
@@ -164,14 +160,35 @@ function onCursorUpdate(properties) {
  * Đăng ký tất cả các hàm lắng nghe sự kiện của IME.
  */
 export function registerImeListeners() {
-    // Defensive check to ensure the IME API is available
-    if (chrome.input && chrome.input.ime) {
-        chrome.input.ime.onFocus.addListener(onFocus);
-        chrome.input.ime.onBlur.addListener(onBlur);
-        chrome.input.ime.onKeyEvent.addListener(onKeyEvent);
-        chrome.input.ime.onCursorUpdate.addListener(onCursorUpdate);
-        console.log("IME listeners registered successfully.");
-    } else {
-        console.error("`chrome.input.ime` API is not available. This is unexpected. Check the extension's permissions and context.");
+    if (!chrome.input || !chrome.input.ime) {
+        console.error("`chrome.input.ime` API is not available. Cannot register listeners.");
+        return;
     }
+
+    // Register listeners individually and check for their existence
+    if (chrome.input.ime.onFocus) {
+        chrome.input.ime.onFocus.addListener(onFocus);
+    } else {
+        console.error("`onFocus` listener is not available.");
+    }
+
+    if (chrome.input.ime.onBlur) {
+        chrome.input.ime.onBlur.addListener(onBlur);
+    } else {
+        console.error("`onBlur` listener is not available.");
+    }
+
+    if (chrome.input.ime.onKeyEvent) {
+        chrome.input.ime.onKeyEvent.addListener(onKeyEvent);
+    } else {
+        console.error("`onKeyEvent` listener is not available.");
+    }
+
+    if (chrome.input.ime.onCursorUpdate) {
+        chrome.input.ime.onCursorUpdate.addListener(onCursorUpdate);
+    } else {
+        console.error("`onCursorUpdate` listener is not available.");
+    }
+
+    console.log("Finished attempting to register IME listeners.");
 }
