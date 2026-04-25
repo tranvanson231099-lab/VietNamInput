@@ -140,6 +140,15 @@ function onKeyEvent(engineID, keyData) {
     return false;
 }
 
+function onCursorUpdate(properties) {
+    // Khi người dùng nhấp chuột hoặc di chuyển con trỏ trong vùng soạn thảo,
+    // cập nhật lại vị trí con trỏ và tính toán lại vùng bôi đen.
+    if (contextID !== 0 && properties.visible) {
+        cursorPosition = properties.cursor;
+        updateComposition();
+    }
+}
+
 // --- Hàm Export Chính ---
 
 /**
@@ -149,4 +158,5 @@ export function registerImeListeners() {
     chrome.input.ime.onFocus.addListener(onFocus);
     chrome.input.ime.onBlur.addListener(onBlur);
     chrome.input.ime.onKeyEvent.addListener(onKeyEvent);
+    chrome.input.ime.onCursorUpdate.addListener(onCursorUpdate);
 }
