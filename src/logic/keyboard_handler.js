@@ -147,13 +147,6 @@ function onKeyEvent(engineID, keyData) {
     return false;
 }
 
-function onCursorUpdate(properties) {
-    if (contextID !== 0 && properties.visible) {
-        cursorPosition = properties.cursor;
-        updateComposition();
-    }
-}
-
 // --- Hàm Export Chính ---
 
 /**
@@ -182,12 +175,6 @@ export function registerImeListeners() {
         chrome.input.ime.onKeyEvent.addListener(onKeyEvent);
     } else {
         console.error("`onKeyEvent` listener is not available.");
-    }
-
-    if (chrome.input.ime.onCursorUpdate) {
-        chrome.input.ime.onCursorUpdate.addListener(onCursorUpdate);
-    } else {
-        console.error("`onCursorUpdate` listener is not available.");
     }
 
     console.log("Finished attempting to register IME listeners.");
