@@ -1,10 +1,11 @@
 
-import { findLastWord } from './word_selector.js';
+import { findWordAtCursor } from './word_selector.js';
 
 // --- Trạng thái của Module ---
 
 let contextID = 0; // ID của ô nhập liệu đang được focus
 let compositionText = ""; // Chuỗi văn bản đang được gõ
+let cursorPosition = 0; // Vị trí của con trỏ trong chuỗi compositionText
 
 // --- Các Hàm Xử Lý Logic ---
 
@@ -14,26 +15,30 @@ let compositionText = ""; // Chuỗi văn bản đang được gõ
 function updateComposition() {
     if (contextID === 0) return;
 
+    // Nếu không có văn bản, xóa vùng bôi đen
     if (compositionText === "") {
          chrome.input.ime.clearComposition({ contextID: contextID });
          return;
     }
 
-    const lastWordInfo = findLastWord(compositionText);
+    // Tìm từ tại vị trí con trỏ hiện tại
+    const wordInfo = findWordAtCursor(compositionText, cursorPosition);
 
-    if (lastWordInfo) {
+    if (wordInfo) {
+        // Nếu tìm thấy, bôi đen từ đó
         chrome.input.ime.setComposition({
             contextID: contextID,
             text: compositionText,
-            cursor: compositionText.length,
-            selectionStart: lastWordInfo.start,
-            selectionEnd: lastWordInfo.end
+            cursor: cursorPosition, // Cập nhật vị trí con trỏ thật
+            selectionStart: wordInfo.start,
+            selectionEnd: wordInfo.end
         });
     } else {
+        // Nếu không, chỉ hiển thị văn bản mà không bôi đen gì
          chrome.input.ime.setComposition({
             contextID: contextID,
             text: compositionText,
-            cursor: compositionText.length,
+            cursor: cursorPosition, // Cập nhật vị trí con trỏ thật
         });
     }
 }
@@ -58,19 +63,18 @@ function resetComposition() {
     if (compositionText) {
          chrome.input.ime.clearComposition({ contextID: contextID });
          compositionText = "";
+         cursorPosition = 0;
     }
 }
 
 // --- Các Hàm Lắng Nghe Sự Kiện IME ---
 
 function onFocus(context) {
-    console.log("IME focused:", context);
     contextID = context.contextID;
     resetComposition();
 }
 
 function onBlur(blurredContextID) {
-    console.log("IME blurred, context ID:", blurredContextID);
     resetComposition();
     contextID = 0;
 }
@@ -80,22 +84,53 @@ function onKeyEvent(engineID, keyData) {
         return false;
     }
 
-    if (keyData.key === ' ' || keyData.key === 'Enter') {
-        commitText(compositionText + (keyData.key === ' ' ? ' ' : ''));
+    // Xử lý các phím di chuyển con trỏ
+    if (keyData.key === 'ArrowLeft') {
+        cursorPosition = Math.max(0, cursorPosition - 1);
+        updateComposition();
+        return true;
+    }
+    if (keyData.key === 'ArrowRight') {
+        cursorPosition = Math.min(compositionText.length, cursorPosition + 1);
+        updateComposition();
         return true;
     }
 
-    if (keyData.key === 'Backspace') {
+    // Khi nhấn phím Space, "commit" văn bản và thêm dấu cách
+    if (keyData.key === ' ') {
+        commitText(compositionText + ' ');
+        return true;
+    }
+
+    // Khi nhấn phím Enter
+    if (keyData.key === 'Enter') {
+        // Commit phần text đang soạn thảo nếu có
         if (compositionText.length > 0) {
-            compositionText = compositionText.slice(0, -1);
+            commitText(compositionText);
+        }
+        // Luôn để hệ thống xử lý phím Enter (để xuống dòng)
+        return false;
+    }
+
+    // Khi nhấn phím Backspace
+    if (keyData.key === 'Backspace') {
+        if (cursorPosition > 0) {
+            const beforeCursor = compositionText.substring(0, cursorPosition - 1);
+            const afterCursor = compositionText.substring(cursorPosition);
+            compositionText = beforeCursor + afterCursor;
+            cursorPosition--;
             updateComposition();
             return true;
         }
         return false;
     }
 
+    // Xử lý các ký tự thông thường
     if (keyData.key.length === 1 && !keyData.ctrlKey && !keyData.altKey) {
-        compositionText += keyData.key;
+        const beforeCursor = compositionText.substring(0, cursorPosition);
+        const afterCursor = compositionText.substring(cursorPosition);
+        compositionText = beforeCursor + keyData.key + afterCursor;
+        cursorPosition++;
         updateComposition();
         return true;
     }
