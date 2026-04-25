@@ -1,7 +1,19 @@
-"input_components": [
-  {
-    "type": "ime",
-    "id": "vietnam_input",
-    "language": "vi"
+{
+    "manifest_version": 3,
+    "name": "Vietnam Input",
+    "version": "1.0",
+  
+    "input_components": [
+      {
+        "type": "ime",
+        "id": "vietnam_input",
+        "language": "vi"
+      }
+    ],
+  
+    "permissions": ["input"],
+  
+    "background": {
+      "service_worker": "background.js"
+    }
   }
-]
