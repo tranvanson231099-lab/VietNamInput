@@ -3,17 +3,22 @@
     "name": "Vietnam Input",
     "version": "1.0",
   
-    "input_components": [
-      {
-        "type": "ime",
-        "id": "vietnam_input",
-        "language": "vi"
-      }
-    ],
-  
     "permissions": ["input"],
   
     "background": {
       "service_worker": "background.js"
-    }
+    },
+  
+    "input_components": [
+      {
+        "type": "ime",
+        "id": "vietnam_input",
+        "name": "__MSG_ime_name__",
+        "description": "__MSG_ime_desc__",
+        "language": "vi",
+        "layouts": ["us"]
+      }
+    ],
+  
+    "default_locale": "en"
   }
