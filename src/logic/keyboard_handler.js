@@ -18,11 +18,8 @@ const compositionBuffer = new CompositionBuffer(); // Bộ đệm cho từ đang
 function updateComposition() {
     if (contextID === 0) return;
 
-    if (compositionText === "") {
-         chrome.input.ime.clearComposition({ contextID: contextID });
-         compositionBuffer.clear(); // Xóa cả bộ đệm
-         return;
-    }
+    // FIX: Xóa khối điều kiện `if (compositionText === "")` để tránh race condition.
+    // Logic bên dưới giờ đây sẽ xử lý cả trường hợp chuỗi rỗng một cách an toàn.
 
     const wordInfo = findWordAtCursor(compositionText, cursorPosition);
 
@@ -45,6 +42,8 @@ function updateComposition() {
             selectionEnd: wordInfo.end
         });
     } else {
+        // Nếu không có từ nào được tìm thấy (bao gồm cả khi compositionText rỗng),
+        // hãy gọi setComposition với chuỗi rỗng để xóa vùng bôi đen một cách an toàn.
          chrome.input.ime.setComposition({
             contextID: contextID,
             text: compositionText,
